@@ -16,10 +16,43 @@ const bugController = {
   },
 
   getAllBugs: (req, res) => {
+    let page = parseInt(req.query.page);
+    let limit = parseInt(req.query.limit);
+
+    if (!page) {
+      page = 1;
+    }
+
+    if (!limit) {
+      limit = 10;
+    }
+
+    const offset = (page - 1) * limit;
+
+    let sortBy = "";
+    let sortType = "";
+
+    sortBy = req.query.sortBy;
+    sortType = req.query.sortType;
+
+    if (!req.query.sortBy) {
+      sortBy = "bug_id";
+    }
+
+    if (!req.query.sortType) {
+      sortType = "DESC";
+    }
+
+    let fieldName = sortBy === "username" ? `users.username` : `bugs.${sortBy}`;
+
     const sql = `SELECT bugs.bug_id, bugs.bugname, bugs.bug, bugs.category, 
-                bugs.created_on, users.username, users.user_id
-                FROM users
-                INNER JOIN bugs ON users.user_id = bugs.user_id;`;
+                  bugs.created_on, users.username, users.user_id
+                  FROM users
+                  INNER JOIN bugs ON users.user_id = bugs.user_id
+                  ORDER BY ${fieldName} ${sortType}
+                  LIMIT ${limit}
+				          OFFSET ${offset};`;
+
     connection.query(sql, async (err, result) => {
       if (err) res.sendStatus(404);
       await res.send(result.rows);
@@ -31,11 +64,44 @@ const bugController = {
 
     const params = [user_id];
 
+    let page = parseInt(req.query.page);
+    let limit = parseInt(req.query.limit);
+
+    if (!page) {
+      page = 1;
+    }
+
+    if (!limit) {
+      limit = 10;
+    }
+
+    const offset = (page - 1) * limit;
+
+    let sortBy = "";
+    let sortType = "";
+
+    sortBy = req.query.sortBy;
+    sortType = req.query.sortType;
+
+    if (!req.query.sortBy) {
+      sortBy = "bug_id";
+    }
+
+    if (!req.query.sortType) {
+      sortType = "DESC";
+    }
+
+    let fieldName = sortBy === "username" ? `users.username` : `bugs.${sortBy}`;
+
     const sql = `SELECT bugs.bug_id, bugs.bugname, bugs.bug, bugs.category,
                     bugs.created_on, users.username, users.user_id
                     FROM users
                     INNER JOIN bugs ON users.user_id = bugs.user_id
-                    WHERE users.user_id= $1;`;
+                    WHERE users.user_id= $1
+                    ORDER BY ${fieldName} ${sortType}
+                    LIMIT ${limit}
+				            OFFSET ${offset};`;
+
     connection.query(sql, params, async (err, result) => {
       if (err) res.sendStatus(404);
       await res.send(result.rows);
@@ -84,6 +150,50 @@ const bugController = {
       if (err) res.sendStatus(404);
       await res.send("Bug is deleted!");
     });
+  },
+
+  searchBugs: (req, res) => {
+    let searchInput = "";
+
+    searchInput = req.query.searchInput;
+
+    if (!req.query.searchInput) {
+      searchInput = "";
+    }
+
+    const sql = `SELECT bugs.bug_id, bugs.bugname, bugs.bug, bugs.category, 
+                  bugs.created_on, users.username, users.user_id
+                  FROM users
+                  INNER JOIN bugs ON users.user_id = bugs.user_id
+                  WHERE	bugs.bug iLIKE '%${searchInput}%' 
+                  OR bugs.bugname iLIKE '%${searchInput}%'
+                  OR bugs.category iLIKE '%${searchInput}%'
+                  OR users.username iLIKE '%${searchInput}%';`;
+
+    connection.query(sql, async (err, result) => {
+      if (err) res.sendStatus(404);
+      await res.send(result.rows);
+    });
+  },
+
+  countBugs: (req, res) => {
+    if (req.params.userId === undefined) {
+      let sql = `SELECT COUNT(*) FROM bugs;`;
+
+      connection.query(sql, async (err, result) => {
+        if (err) res.sendStatus(404);
+        await res.send(result.rows[0].count);
+      });
+    } else {
+      const id = req.params.userId;
+      const params = [id];
+      sql = `SELECT COUNT(*) FROM bugs WHERE user_id = $1;`;
+
+      connection.query(sql, params, async (err, result) => {
+        if (err) res.sendStatus(404);
+        await res.send(result.rows[0].count);
+      });
+    }
   },
 };
 

@@ -60,6 +60,7 @@ const authController = {
               refreshTokens.push(refreshToken);
 
               const username = result.rows[0].username;
+              const user_id = result.rows[0].user_id;
               const email = result.rows[0].email;
               const created_on = result.rows[0].created_on;
 
@@ -67,6 +68,7 @@ const authController = {
                 accessToken,
                 refreshToken,
                 username,
+                user_id,
                 email,
                 created_on,
               });
